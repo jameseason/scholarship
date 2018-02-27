@@ -1,1 +1,1 @@
-# scholarship
+Collection of projects for scholarship work.
