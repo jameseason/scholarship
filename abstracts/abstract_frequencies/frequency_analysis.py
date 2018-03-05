@@ -4,7 +4,7 @@ import os
 import sys
 from openpyxl import Workbook
 from Tkinter import *
-import Tkinter, Tkconstants, tkFileDialog
+import Tkinter, Tkconstants, tkFileDialog, tkFont
 
 ### Abstract Retrieval ###
 
@@ -127,7 +127,7 @@ def getTopicCount(topicItems, abstracts):
             count += 1
     return count
     
-# Topics dict -> string                
+# Get all topics as string. Topics dict -> string                
 def topicsToString(topics):               
     s = ""
     i = list(topics.keys())
@@ -135,7 +135,7 @@ def topicsToString(topics):
     for topic in i:
         s = s + topic + ": " + str(topics[topic]) + "\n"
     return s
-
+  
 ### Main Program and GUI ###
 
 # Run everything
@@ -172,6 +172,7 @@ def addTopicsFromPath(topicsPath):
         topicsDict = getTopics(topicsPath)
         for topic in topicsDict:
             availableTopics[topic] = topicsDict[topic]
+        updateStatus("Topics imported")
     except Exception as e:
         updateStatus("Couldn't load topics. Make sure your path is correct and file is valid.")
         print str(e)
@@ -179,15 +180,16 @@ def addTopicsFromPath(topicsPath):
 
 # Import topics
 def openFileDialog():
-    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd(),title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
-    if w.filename != None:
+    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
+    if w.filename != None and len(w.filename) > 0:
         addTopicsFromPath(w.filename)
 
 # Export topics
 def saveFileDialog():
-    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd(),title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
-    if w.filename != None:
+    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
+    if w.filename != None and len(w.filename) > 0:
         writeFile(w.filename)        
+        updateStatus("Topics exported")
 
 # Write exported topics file
 def writeFile(filepath):
@@ -204,8 +206,48 @@ def writeFile(filepath):
 
 # Refresh list of topics
 def refreshTopics():
-    topicsList = topicsToString(availableTopics)
-    topics.configure(text=topicsList)
+    # Empty frame
+    list = top.winfo_children()
+    for item in list:
+        item.destroy()
+      
+    if len(availableTopics) == 0:
+        default = Label(top, text="(No topics to show)")
+        default.grid(row=0, sticky=W, padx=5)
+    else:
+        # Add title header
+        title = Label(top, text="Title")
+        title.grid(row=0, column=0, sticky=W, padx=5, pady=5)
+        
+        # Add items header
+        items = Label(top, text="Items")
+        items.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+        
+        # Underline headers
+        f = tkFont.Font(title, title.cget("font"))
+        f.configure(underline = True)
+        title.configure(font=f)
+        items.configure(font=f)
+        
+        # Add topics to frame
+        r=1
+        for topic in availableTopics:
+            l = Label(top, text=topic, relief=RIDGE)
+            l.grid(row=r, column=0, sticky=W, padx=5)
+            l.bind("<Button-1>", removeTopic)
+                    
+            i = Label(top, text=str(availableTopics[topic]))
+            i.grid(row=r, column=1, sticky=W, padx=5)
+       
+            r += 1
+        footer = Label(top, text="(Click a topic title to remove it)")
+        footer.grid(row=r, column=0, sticky=W, pady=5, columnspan=2)
+        
+def removeTopic(event):
+    topic = event.widget.cget("text")
+    availableTopics.pop(topic)
+    updateStatus("Removed topic " + topic)
+    refreshTopics()
 
 # Add topic to list from 'New Topic' window
 def addTopic(title, items, t):
@@ -218,6 +260,7 @@ def addTopic(title, items, t):
             items.remove(items[x])
     availableTopics[title] = items 
     refreshTopics()
+    updateStatus("Added topic " + title)
     t.destroy()
     
     
@@ -234,50 +277,41 @@ def newTopicWindow():
     topicsEntry = Text(t, height=5)
     topicsEntry.grid(row=2, sticky=W, pady=5, padx=5, columnspan=2)
     Button(t, text='Save', command=lambda: addTopic(titleEntry, topicsEntry, t)).grid(row=3, column=0, sticky=E, pady=5, padx=5)
-    Button(t, text='Quit', command=t.destroy).grid(row=3, column=1, sticky=W, pady=5, padx=5)
+    Button(t, text='Cancel', command=t.destroy).grid(row=3, column=1, sticky=W, pady=5, padx=5)
     
 
+defaultFolder = 'RS_Abstracts_1975-1936'
+defaultOutput = 'output.xlsx'
+    
 availableTopics = {}  
 
 w = Tk()
 w.title("Topic frequency analysis")
 
-Button(w, text='New topic', command=newTopicWindow).grid(row=0, column=0, sticky=W, pady=5, padx=5)
-Button(w, text='Import topics', command=openFileDialog).grid(row=0, column=1, sticky=W, pady=5, padx=5)
-Button(w, text='Export topics', command=saveFileDialog).grid(row=0, column=2, sticky=W, pady=5, padx=5)
+buttons = Frame(w)
+buttons.grid(row=0, sticky=W, padx=5, pady=5, columnspan=2)
+Label(buttons, text="Topics: ").grid(row=0, column=0, sticky=W)
+Button(buttons, text='New', command=newTopicWindow).grid(row=0, column=1, sticky=W, padx=5)
+Button(buttons, text='Import', command=openFileDialog).grid(row=0, column=2, sticky=W, padx=5)
+Button(buttons, text='Export', command=saveFileDialog).grid(row=0, column=3, sticky=W, padx=5)
 
-topics = Label(w, text="(No topics present)", justify=LEFT)
-topics.grid(row=1, sticky=W, padx=20, pady=10, columnspan=2)
-
-
-"""
-topicsLabel = Label(w, text="Topics file path (.txt file):")
-topicsLabel.grid(row=0, sticky=W, pady=5, padx=5)
-
-topicsEntry = Entry(w, width=50)
-topicsEntry.insert(END, 'topics.txt')
-topicsEntry.grid(row=0,column=1, sticky=W, pady=5, padx=5)
-
-topicsHeader = Label(w, text="Topics being used:")
-topicsHeader.grid(row=1, column=0, sticky=W, pady=5, padx=5)
-
-Button(w, text='Load from file', command=openFileDialog).grid(row=1, column=1, sticky=W, pady=5, padx=5)
-"""
-
-
+#topics frame
+top = Frame(w)
+top.grid(row=1, sticky=W, padx=20, pady=5, columnspan=2)
+refreshTopics()
 
 abstractLabel = Label(w, text="Abstracts path (folder):")
 abstractLabel.grid(row=3, sticky=W, pady=5, padx=5)
 
 abstractEntry = Entry(w, width=50)
-abstractEntry.insert(END, 'RS_Abstracts_1975-1936')
+abstractEntry.insert(END, defaultFolder)
 abstractEntry.grid(row=3,column=1, sticky=W, pady=5, padx=5)
 
 outputLabel = Label(w, text="Output path (.xlsx):")
 outputLabel.grid(row=4, sticky=W, pady=5, padx=5)
 
 outputEntry = Entry(w, width=50)
-outputEntry.insert(END, 'output.xlsx')
+outputEntry.insert(END, defaultOutput)
 outputEntry.grid(row=4,column=1, sticky=W, pady=5, padx=5)
 
 

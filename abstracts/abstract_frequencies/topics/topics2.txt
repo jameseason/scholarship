@@ -1,0 +1,2 @@
+mytopic (item1, item2, *item)
+farming (wheat, bread, grain, farm*)
