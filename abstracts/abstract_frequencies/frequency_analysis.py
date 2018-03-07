@@ -113,12 +113,19 @@ def getTopics(topicsPath):
             topics[topicName] = items
     return topics
             
+# Remove all characters that aren't alpha or space from a string
+def removeNonAlpha(s):
+    new = ''
+    for c in s:
+        if c.isalpha() or c.isspace():
+            new += c
+    return new
         
 # Get how many times a topic appears in a specified year
 def getTopicCount(topicItems, abstracts):
     count = 0
     for abstract in abstracts:
-        abstract = abstract.lower().split()
+        abstract = removeNonAlpha(abstract).lower().split()
         present = False
         for item in topicItems:
             if isPresent(item.lower(), abstract):
@@ -158,7 +165,7 @@ def run():
                     #print topic + " (" + year + "): " + str(topicCount)
         updateStatus("Writing to excel...")
         generateExcel(topics.keys(), abstracts.keys(), results, outputPath)
-        updateStatus("Success. Excel file written to " + outputPath)
+        updateStatus("Success. Excel file written to output path.")
     except Exception as e:
         updateStatus("Error: " + str(e))
 
@@ -257,7 +264,7 @@ def refreshTopics():
        
             r += 1
         footer = Label(top, text="(Click a topic title to remove it)")
-        footer.grid(row=r, column=0, sticky=W, pady=5, columnspan=2)
+        footer.grid(row=r, column=0, sticky=W, pady=5, columnspan=3)
         
 # Remove available topic from list
 def removeTopic(event):
@@ -272,7 +279,7 @@ def addTopic(title, items, t):
     items = items.get("1.0",'end-1c')
     items = items.split(',')
     for x in range(len(items)):
-        items[x] = items[x].strip().encode('ascii','ignore')
+        items[x] = removeNonAlpha(items[x]).strip().encode('ascii','ignore')
         if len(items[x]) < 1:
             items.remove(items[x])
     availableTopics[title] = items 
@@ -316,7 +323,7 @@ Button(buttons, text='Export', command=saveFileDialog).grid(row=0, column=3, sti
 
 # list of topics
 top = Frame(w)
-top.grid(row=1, sticky=W, padx=20, pady=5, columnspan=2)
+top.grid(row=1, sticky=W, padx=20, pady=5, columnspan=3)
 refreshTopics()
 
 # abstracts folder
