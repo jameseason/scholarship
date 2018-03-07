@@ -1,9 +1,0 @@
-# This file defines topics and items within them.
-# Lines beginning with '#' are comments and will be ignored.
-# List each topic on a new line, followed by parentheses containing 
-# comma-separated items. Items may contain an asterisk * to match a word chunk.
-
-fruits (orange, strawberr*, *melon)
-farming (wheat, bread, grain, farm*)
-brazil (brazil)
-gum flavors (wintergreen, bubble gum)

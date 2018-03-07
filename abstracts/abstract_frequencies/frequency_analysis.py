@@ -163,8 +163,8 @@ def run():
         updateStatus("Error: " + str(e))
 
 # Update status label at bottom of main window
-def updateStatus(status):
-    statusLabel.configure(text="Status: " + status)
+def updateStatus(s):
+    status.set("Status: " + s)
     w.update_idletasks()
    
 def addTopicsFromPath(topicsPath):
@@ -180,13 +180,29 @@ def addTopicsFromPath(topicsPath):
 
 # Import topics
 def openFileDialog():
-    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
+    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
     if w.filename != None and len(w.filename) > 0:
         addTopicsFromPath(w.filename)
 
+# Select Abstracts folder
+def getAbstractsDialog():
+    w.filename = tkFileDialog.askdirectory(initialdir = os.getcwd() + "/abstracts", title = "Select abstracts folder")
+    if w.filename != None and len(w.filename) > 0:
+        abstractLocation.set(w.filename)
+        
+# Set output file
+def setOutputDialog(): 
+    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd(),title = "Select output file",filetypes = (("Excel file","*.xlsx"),("all files","*.*")))
+    if w.filename != None and len(w.filename) > 0:
+        if w.filename[-5:] != '.xlsx':
+            w.filename += '.xlsx'
+        outputLocation.set(w.filename)
+        
+
+
 # Export topics
 def saveFileDialog():
-    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("text files","*.txt"),("all files","*.*")))
+    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
     if w.filename != None and len(w.filename) > 0:
         writeFile(w.filename)        
         updateStatus("Topics exported")
@@ -243,6 +259,7 @@ def refreshTopics():
         footer = Label(top, text="(Click a topic title to remove it)")
         footer.grid(row=r, column=0, sticky=W, pady=5, columnspan=2)
         
+# Remove available topic from list
 def removeTopic(event):
     topic = event.widget.cget("text")
     availableTopics.pop(topic)
@@ -264,7 +281,7 @@ def addTopic(title, items, t):
     t.destroy()
     
     
-# Create topics
+# Create topic from new window
 def newTopicWindow():
     t = Toplevel(w)
     t.wm_title("New topic")
@@ -279,15 +296,17 @@ def newTopicWindow():
     Button(t, text='Save', command=lambda: addTopic(titleEntry, topicsEntry, t)).grid(row=3, column=0, sticky=E, pady=5, padx=5)
     Button(t, text='Cancel', command=t.destroy).grid(row=3, column=1, sticky=W, pady=5, padx=5)
     
+    
 
-defaultFolder = 'RS_Abstracts_1975-1936'
-defaultOutput = 'output.xlsx'
+defaultFolder = 'abstracts/RS_Abstracts_1975-1936'
+defaultOutput = 'topicFrequencies.xlsx'
     
 availableTopics = {}  
 
 w = Tk()
 w.title("Topic frequency analysis")
 
+# make topics buttons
 buttons = Frame(w)
 buttons.grid(row=0, sticky=W, padx=5, pady=5, columnspan=2)
 Label(buttons, text="Topics: ").grid(row=0, column=0, sticky=W)
@@ -295,30 +314,42 @@ Button(buttons, text='New', command=newTopicWindow).grid(row=0, column=1, sticky
 Button(buttons, text='Import', command=openFileDialog).grid(row=0, column=2, sticky=W, padx=5)
 Button(buttons, text='Export', command=saveFileDialog).grid(row=0, column=3, sticky=W, padx=5)
 
-#topics frame
+# list of topics
 top = Frame(w)
 top.grid(row=1, sticky=W, padx=20, pady=5, columnspan=2)
 refreshTopics()
 
+# abstracts folder
 abstractLabel = Label(w, text="Abstracts path (folder):")
 abstractLabel.grid(row=3, sticky=W, pady=5, padx=5)
 
-abstractEntry = Entry(w, width=50)
-abstractEntry.insert(END, defaultFolder)
+abstractLocation = StringVar()
+abstractLocation.set(defaultFolder)
+
+abstractEntry = Entry(w, textvariable=abstractLocation, width=30)
 abstractEntry.grid(row=3,column=1, sticky=W, pady=5, padx=5)
 
+Button(w, text='Browse', command=getAbstractsDialog).grid(row=3, column=2, sticky=W, pady=5, padx=5)
+
+# output file
 outputLabel = Label(w, text="Output path (.xlsx):")
 outputLabel.grid(row=4, sticky=W, pady=5, padx=5)
 
-outputEntry = Entry(w, width=50)
-outputEntry.insert(END, defaultOutput)
+outputLocation = StringVar()
+outputLocation.set(defaultOutput)
+
+outputEntry = Entry(w, textvariable=outputLocation, width=30)
 outputEntry.grid(row=4,column=1, sticky=W, pady=5, padx=5)
+
+Button(w, text='Browse', command=setOutputDialog).grid(row=4, column=2, sticky=W, pady=5, padx=5)
 
 
 Button(w, text='Generate topic frequencies', command=run).grid(row=5, column=0, sticky=E, pady=5, padx=5)
 Button(w, text='Quit', command=w.quit).grid(row=5, column=1, sticky=W, pady=5, padx=5)
 
-statusLabel = Label(w, text="Status: idle")
+status = StringVar()
+statusLabel = Label(w, textvariable=status)
+updateStatus("idle")
 statusLabel.grid(row=6, pady=5, columnspan=2, sticky=W)
 
 w.mainloop()
