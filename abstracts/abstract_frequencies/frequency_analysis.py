@@ -8,6 +8,21 @@ import Tkinter, Tkconstants, tkFileDialog, tkFont
 
 ### Abstract Retrieval ###
 
+# Get the frequencies of all words in all abstracts
+def getAllFreqs(abstracts):
+    allFreqs = {}
+    for year in abstracts.keys():
+        for abstract in abstracts[year]:
+            wordlist = abstract.split()
+            for word in wordlist:
+                word = removeNonAlpha(cleanse(word)).lower().strip()
+                if len(word) > 0:
+                    if word in allFreqs:
+                        allFreqs[word] += 1
+                    else:
+                        allFreqs[word] = 1
+    return allFreqs
+
 # Remove any non utf-8 characters that might confuse openpyxl
 def cleanse(txt):
     return txt.decode('utf-8', 'ignore').encode("utf-8")  
@@ -53,9 +68,10 @@ def isPresent(item, abstract):
     return False
     
 # Generate an excel file based on results    
-def generateExcel(topics, years, results, outputPath):
+def generateExcel(topics, years, results, allFreqs, outputPath):
     wb = Workbook()
     ws = wb.active
+    ws.title = "Topics"
     years.sort()
     topics.sort()
     col = 2
@@ -70,6 +86,14 @@ def generateExcel(topics, years, results, outputPath):
         row = getRow(ws, result[1], len(years)+2)
         col = getCol(ws, result[0], len(topics)+2)
         ws[colNumToString(col) + str(row)] = result[2]
+    
+    ws2 = wb.create_sheet(title = 'All words')
+    ws2 = wb.get_sheet_by_name('All words')    
+    count=1
+    for word in allFreqs.keys():
+        ws2["A" + str(count)] = word
+        ws2["B" + str(count)] = allFreqs[word]
+        count += 1
     wb.save(outputPath)
 
 # Find of given year
@@ -145,7 +169,7 @@ def topicsToString(topics):
   
 ### Main Program and GUI ###
 
-# Run everything
+# Run topic frequencies
 def run():
     try:
         updateStatus("Running...")
@@ -156,15 +180,18 @@ def run():
         files = getFiles(abstractPath, [])
         abstracts = getAbstracts(files)
         updateStatus("Analyzing data...")
+        # topic freqs
         results = []
         for topic in topics.keys():
             for year in abstracts.keys():
                 topicCount = getTopicCount(topics[topic], abstracts[year])
                 if topicCount > 0:
                     results.append((topic, year, topicCount))
-                    #print topic + " (" + year + "): " + str(topicCount)
+        # all freqs
+        allFreqs = getAllFreqs(abstracts)
+            
         updateStatus("Writing to excel...")
-        generateExcel(topics.keys(), abstracts.keys(), results, outputPath)
+        generateExcel(topics.keys(), abstracts.keys(), results, allFreqs, outputPath)
         updateStatus("Success. Excel file written to output path.")
     except Exception as e:
         updateStatus("Error: " + str(e))
@@ -187,13 +214,13 @@ def addTopicsFromPath(topicsPath):
 
 # Import topics
 def openFileDialog():
-    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
+    w.filename = tkFileDialog.askopenfilename(initialdir = os.getcwd(),title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
     if w.filename != None and len(w.filename) > 0:
         addTopicsFromPath(w.filename)
 
 # Select Abstracts folder
 def getAbstractsDialog():
-    w.filename = tkFileDialog.askdirectory(initialdir = os.getcwd() + "/abstracts", title = "Select abstracts folder")
+    w.filename = tkFileDialog.askdirectory(initialdir = os.getcwd(), title = "Select abstracts folder")
     if w.filename != None and len(w.filename) > 0:
         abstractLocation.set(w.filename)
         
@@ -209,7 +236,7 @@ def setOutputDialog():
 
 # Export topics
 def saveFileDialog():
-    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd() + "/topics",title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
+    w.filename = tkFileDialog.asksaveasfilename(initialdir = os.getcwd(),title = "Select topics file",filetypes = (("Text files","*.txt"),("all files","*.*")))
     if w.filename != None and len(w.filename) > 0:
         writeFile(w.filename)        
         updateStatus("Topics exported")
@@ -305,8 +332,8 @@ def newTopicWindow():
     
     
 
-defaultFolder = 'abstracts/RS_Abstracts_1975-1936'
-defaultOutput = 'topicFrequencies.xlsx'
+defaultFolder = ''
+defaultOutput = ''
     
 availableTopics = {}  
 
@@ -351,7 +378,7 @@ outputEntry.grid(row=4,column=1, sticky=W, pady=5, padx=5)
 Button(w, text='Browse', command=setOutputDialog).grid(row=4, column=2, sticky=W, pady=5, padx=5)
 
 
-Button(w, text='Generate topic frequencies', command=run).grid(row=5, column=0, sticky=E, pady=5, padx=5)
+Button(w, text='Generate frequencies', command=run).grid(row=5, column=0, sticky=E, pady=5, padx=5)
 Button(w, text='Quit', command=w.quit).grid(row=5, column=1, sticky=W, pady=5, padx=5)
 
 status = StringVar()
