@@ -55,17 +55,6 @@ def getAbstracts(files):
     return abstracts
 
 ### Excel Writing ###
-
-# Check if a topic item is present in an abstract
-def isPresent(item, abstract):
-    if item in abstract:
-        return True
-    if '*' in item:
-        item = item.replace('*', '.*')
-        for word in abstract:
-            if re.match(item, word):
-                return True
-    return False
     
 # Generate an excel file based on results    
 def generateExcel(topics, years, results, allFreqs, outputPath):
@@ -146,15 +135,40 @@ def removeNonAlpha(s):
     return new
         
 # Get how many times a topic appears in a specified year
-def getTopicCount(topicItems, abstracts):
+def getTopicCount(topicItems, abstracts, collectAll):
     count = 0
     for abstract in abstracts:
         abstract = removeNonAlpha(abstract).lower().split()
-        present = False
-        for item in topicItems:
-            if isPresent(item.lower(), abstract):
-                present = True
-        if present:
+        if collectAll:
+            present = False
+            for item in topicItems:
+                if isPresent(item.lower(), abstract):
+                    present = True
+            if present:
+                count += 1
+        else:
+            for item in topicItems:
+                count += countAppearances(item, abstract)
+    return count
+
+
+# Check if a topic item is present in an abstract
+def isPresent(item, abstract):
+    if item in abstract:
+        return True
+    if '*' in item:
+        item = item.replace('*', '.*')
+        for word in abstract:
+            if re.match(item, word):
+                return True
+    return False
+    
+# Count how many times a topic item is present in an abstract
+def countAppearances(item, abstract):
+    count = 0
+    item = item.replace('*', '.*')
+    for word in abstract:
+        if re.match(item, word):
             count += 1
     return count
     
@@ -175,6 +189,7 @@ def run():
         updateStatus("Running...")
         abstractPath = abstractEntry.get()
         outputPath = outputEntry.get()
+        collectAll = bool(check.get())
             
         topics = availableTopics
         files = getFiles(abstractPath, [])
@@ -184,7 +199,7 @@ def run():
         results = []
         for topic in topics.keys():
             for year in abstracts.keys():
-                topicCount = getTopicCount(topics[topic], abstracts[year])
+                topicCount = getTopicCount(topics[topic], abstracts[year], collectAll)
                 if topicCount > 0:
                     results.append((topic, year, topicCount))
         # all freqs
@@ -377,13 +392,16 @@ outputEntry.grid(row=4,column=1, sticky=W, pady=5, padx=5)
 
 Button(w, text='Browse', command=setOutputDialog).grid(row=4, column=2, sticky=W, pady=5, padx=5)
 
+check = IntVar()
+check.set(1)
+Checkbutton(w, text="Limit topic matches to one per abstract", variable=check).grid(row=5, column=0, sticky=W, pady=5, padx=5, columnspan=2)
 
-Button(w, text='Generate frequencies', command=run).grid(row=5, column=0, sticky=E, pady=5, padx=5)
-Button(w, text='Quit', command=w.quit).grid(row=5, column=1, sticky=W, pady=5, padx=5)
+Button(w, text='Generate frequencies', command=run).grid(row=6, column=0, sticky=E, pady=5, padx=5)
+Button(w, text='Quit', command=w.quit).grid(row=6, column=1, sticky=W, pady=5, padx=5)
 
 status = StringVar()
 statusLabel = Label(w, textvariable=status)
 updateStatus("idle")
-statusLabel.grid(row=6, pady=5, columnspan=2, sticky=W)
+statusLabel.grid(row=7, pady=5, columnspan=2, sticky=W)
 
 w.mainloop()
