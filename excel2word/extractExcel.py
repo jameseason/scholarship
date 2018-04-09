@@ -3,6 +3,30 @@ from docx import Document
 
 ATTRS_ROW = '3'
 
+# Essentially a dict that returns empty string if attr doesn't exist
+class Household:
+    
+    def __init__(self, attrs):
+        self.attrs = attrs
+    
+    def get(self, attr):
+        if self.contains(attr):
+            return self.attrs[attr]
+        else:
+            return ''
+    
+    def contains(self, attr):
+        if attr in self.attrs:
+            return True
+        else:
+            return False
+    """
+    def toString(self):
+        s = ''
+        s += self.get('lastname') + ', ' + self.get('firstname') + ' ' + self.get('middle') + '\n'
+    """
+        
+            
 # Load excel file from path
 def loadWorkbook(path):
     wb = load_workbook(path)
@@ -23,7 +47,7 @@ def getHouseholds(ws):
                 attr = attr.strip().encode('ascii', 'ignore')
                 val = val.strip().encode('ascii', 'ignore')
                 hh[attr] = val
-        households.append(hh)
+        households.append(Household(hh))
     return households
 
 # Number of attributes in ws    
