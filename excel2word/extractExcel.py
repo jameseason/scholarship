@@ -38,7 +38,7 @@ def getHouseholds(ws):
     numAttrs = getNumAttrs(ws)
     numHouseholds = getNumHouseholds(ws)
     households = []
-    for x in range(4, 50):#numHouseholds):
+    for x in range(4, 10):#numHouseholds):
         hh = {}
         for y in range(1, numAttrs):
             attr = ws[colNumToString(y) + ATTRS_ROW].value

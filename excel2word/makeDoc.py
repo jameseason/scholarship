@@ -1,6 +1,7 @@
 from extractExcel import getData
+from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Cm
 
 from docx.enum.section import WD_SECTION
 
@@ -40,10 +41,21 @@ def testDoc(hhs):
     section = doc.add_section(WD_SECTION.NEW_PAGE)
     set_number_of_columns(section, 2)
     
-    s = '' #here
+    for hh in hhs:
+        one = doc.add_paragraph(getLineOne(hh))
+        two = doc.add_paragraph(getLineTwo(hh))
+        three = getLineThree(hh)
+        if len(three.strip()) > 0:
+            doc.add_paragraph(three)
+        four = doc.add_paragraph(getLineFour(hh))
+        doc = getChildren(doc, hh)
     
-    doc.add_paragraph(s)
-    
+    secs = doc.sections
+    for sec in secs:
+        sec.top_margin = Cm(.5)
+        sec.bottom_margin = Cm(.5)
+        sec.left_margin = Cm(.5)
+        sec.right_margin = Cm(.5)
     doc.save('test.docx')
    
 
@@ -51,6 +63,7 @@ def set_number_of_columns(section, cols):
     """ sets number of columns through xpath. """
     WNS_COLS_NUM = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}num"
     section._sectPr.xpath("./w:cols")[0].set(WNS_COLS_NUM, str(cols))
+    
 
 print 'started'
 hhs = getData()
