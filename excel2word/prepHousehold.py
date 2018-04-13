@@ -1,5 +1,7 @@
 '''
 1 - occupation: right justified
+https://stackoverflow.com/questions/28884114/python-docx-align-both-left-and-right-on-same-line?noredirect=1&lq=1
+
 2 - select which elements to include
 3 - adjust font size
 (send groff code)
@@ -8,6 +10,10 @@
 
 
 from extractExcel import getData
+from docx.shared import Inches, Pt
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
 
 def formatDate(prefix, hh):
     return hh.get(prefix + 'm') + '/' + hh.get(prefix + 'd') + '/' + hh.get(prefix + 'y')
@@ -78,11 +84,16 @@ def getLineFour(hh):
     
 ### Children
 def getChildren(doc, hh):
+    if not hh.contains('cwc01fname'):
+        return doc
     ## First middle last suff | bday | code (or d.) | wifef,m,l:addr code
     table = doc.add_table(rows=1, cols=4)
-    #table.autofit = True
-    table.style = None
+    table = set_col_widths(table, 0.5)
+    table.style = 'Table Grid'
+    #TODO: table font size 8
+    #table.style.font.size = Pt(8)
     cells = table.rows[0].cells
+
     n = 1
     while hh.contains('cwc' + str(n).zfill(2) + 'fname'):
         cells[0].text = hh.get('cwc' + str(n).zfill(2) + 'fname') + ' ' + hh.get('cwc' + str(n).zfill(2) + 'mname') + ' ' + hh.get('cwc' + str(n).zfill(2) + 'sname')
@@ -102,15 +113,28 @@ def getChildren(doc, hh):
         if hh.contains('cwc' + str(n).zfill(2) + 'fname'):
             cells = table.add_row().cells
             
-    for column in table.columns:
-        for cell in column.cells:
-            tc = cell._tc
-            tcPr = tc.get_or_add_tcPr()
-            tcW = tcPr.get_or_add_tcW()
-            tcW.type = 'auto'
     return doc
         
+def set_col_widths(table, w):
+    widths = (1.15, .8, .4, 1.65)
     
+    i=0
+    for cell in table.columns[0].cells:
+        cell.width = Inches(widths[i])
+        
+        #TODO: remove padding
+        #tc = cell._tc
+        #tcPr = tc.get_or_add_tcPr()
+        #tcFitText = OxmlElement('w:tcLeftPadding')
+        #tcFitText.set(qn('w:val'),"0")
+        #tcPr.append(tcFitText)
+        
+        i += 1
+    i = 0
+    for column in table.columns:
+        column.width = Inches(widths[i])
+        i += 1
+    return table
 
 ### Children of other wives
 

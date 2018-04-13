@@ -1,15 +1,18 @@
 from extractExcel import getData
 from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren
 from docx import Document
-from docx.shared import Inches, Cm
-
+from docx.shared import Inches, Cm, Pt
 from docx.enum.section import WD_SECTION
+
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
 
 def exampleDoc():
     document = Document()
 
     document.add_heading('Document Title', 0)
-
+    
     p = document.add_paragraph('A plain paragraph having some ')
     p.add_run('bold').bold = True
     p.add_run(' and some ')
@@ -26,6 +29,14 @@ def exampleDoc():
     )
 
     table = document.add_table(rows=1, cols=3)
+   
+    tc = table.cell(0,0)._tc     # As a test, fit text to cell 0,0
+    tcPr = tc.get_or_add_tcPr()
+
+    tcFitText = OxmlElement('w:tcLeftPadding')
+    tcFitText.set(qn('w:val'),"0")
+    tcPr.append(tcFitText)
+    
     hdr_cells = table.rows[0].cells
     hdr_cells[0].text = 'Qty'
     hdr_cells[1].text = 'Id'
@@ -40,12 +51,21 @@ def testDoc(hhs):
     doc.add_page_break()
     section = doc.add_section(WD_SECTION.NEW_PAGE)
     set_number_of_columns(section, 2)
+    style = doc.styles['Normal']
+    
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(10)
+
+    paragraph_format = style.paragraph_format
+    paragraph_format.space_before = 0
+    paragraph_format.space_after = 0
     
     for hh in hhs:
-        one = doc.add_paragraph(getLineOne(hh))
-        two = doc.add_paragraph(getLineTwo(hh))
-        three = getLineThree(hh)
-        if len(three.strip()) > 0:
+        one = doc.add_paragraph(getLineOne(hh).strip())
+        two = doc.add_paragraph(getLineTwo(hh).strip())
+        three = getLineThree(hh).strip()
+        if len(three) > 0:
             doc.add_paragraph(three)
         four = doc.add_paragraph(getLineFour(hh))
         doc = getChildren(doc, hh)
@@ -64,6 +84,10 @@ def set_number_of_columns(section, cols):
     WNS_COLS_NUM = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}num"
     section._sectPr.xpath("./w:cols")[0].set(WNS_COLS_NUM, str(cols))
     
+
+
+exampleDoc()    
+quit()
 
 print 'started'
 hhs = getData()
