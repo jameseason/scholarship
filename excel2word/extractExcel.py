@@ -20,11 +20,6 @@ class Household:
             return True
         else:
             return False
-    """
-    def toString(self):
-        s = ''
-        s += self.get('lastname') + ', ' + self.get('firstname') + ' ' + self.get('middle') + '\n'
-    """
         
             
 # Load excel file from path
@@ -38,14 +33,19 @@ def getHouseholds(ws):
     numAttrs = getNumAttrs(ws)
     numHouseholds = getNumHouseholds(ws)
     households = []
-    for x in range(4, 10):#numHouseholds):
+    for x in range(4, 5):#numHouseholds):
         hh = {}
         for y in range(1, numAttrs):
             attr = ws[colNumToString(y) + ATTRS_ROW].value
             val = ws[colNumToString(y) + str(x)].value
             if not val is None:
                 attr = attr.strip().encode('ascii', 'ignore')
-                val = val.strip().encode('ascii', 'ignore')
+                
+                val = str(val).strip().encode('ascii', 'ignore')
+                #if isinstance(val, basestring):
+                #    val = val.strip().encode('ascii', 'ignore')
+                #else:
+                #    print val
                 hh[attr] = val
         households.append(Household(hh))
     return households
@@ -79,7 +79,7 @@ def colNumToString(div):
    
 # Run everything to get households
 def getData():
-    ws = loadWorkbook('Groffdale_2017.xlsx')
+    ws = loadWorkbook('samplehousehold.xlsx')
     households = getHouseholds(ws)
     return households
         

@@ -62,13 +62,14 @@ def testDoc(hhs):
     paragraph_format.space_after = 0
     
     for hh in hhs:
-        one = doc.add_paragraph(getLineOne(hh).strip())
+        doc = getLineOne(hh, doc)
         two = doc.add_paragraph(getLineTwo(hh).strip())
         three = getLineThree(hh).strip()
         if len(three) > 0:
             doc.add_paragraph(three)
         four = doc.add_paragraph(getLineFour(hh))
         doc = getChildren(doc, hh)
+        doc.add_paragraph("")
     
     secs = doc.sections
     for sec in secs:
@@ -86,8 +87,8 @@ def set_number_of_columns(section, cols):
     
 
 
-exampleDoc()    
-quit()
+#exampleDoc()    
+#quit()
 
 print 'started'
 hhs = getData()
