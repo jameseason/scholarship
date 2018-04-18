@@ -1,5 +1,5 @@
 from extractExcel import getData
-from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren
+from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren, getPrevSpouse
 from docx import Document
 from docx.shared import Inches, Cm, Pt
 from docx.enum.section import WD_SECTION
@@ -47,8 +47,8 @@ def exampleDoc():
     
 def testDoc(hhs):
     doc = Document()
-    doc.add_paragraph("first page blank.")
-    doc.add_page_break()
+    #doc.add_paragraph("first page blank")
+    #doc.add_page_break()
     section = doc.add_section(WD_SECTION.NEW_PAGE)
     set_number_of_columns(section, 2)
     style = doc.styles['Normal']
@@ -67,9 +67,12 @@ def testDoc(hhs):
         three = getLineThree(hh).strip()
         if len(three) > 0:
             doc.add_paragraph(three)
-        four = doc.add_paragraph(getLineFour(hh))
-        doc = getChildren(doc, hh)
-        doc.add_paragraph("")
+        doc = getLineFour(hh, doc)
+        doc = getChildren(hh, doc, 'cwc')
+        doc = getPrevSpouse(hh, doc, '1w', True)
+        doc = getPrevSpouse(hh, doc, '2w', True)
+        doc = getPrevSpouse(hh, doc, '1h', False)
+        doc = getPrevSpouse(hh, doc, '2h', False)
     
     secs = doc.sections
     for sec in secs:

@@ -1,12 +1,23 @@
 '''
-1 - occupation: right justified
+- occupation: right justified
 https://stackoverflow.com/questions/28884114/python-docx-align-both-left-and-right-on-same-line?noredirect=1&lq=1
 
-2 - select which elements to include
-3 - adjust font size
+- GUI:
+    - select which elements to include
+    - adjust font size
+
+- table style: https://github.com/python-openxml/python-docx/issues/9
+
+
+
+-Right-justify the occupation
+-Create a GUI which allows a user to select which fields to include and specify the font size
+-Adjust the table style to match sample doc (indentation, cell padding, border color)
+-Fix capitalization of state abbreviations and certain name suffixes
+-Increase page column width to match sample doc
+    
 (send groff code)
 
-table style: https://github.com/python-openxml/python-docx/issues/9
 
 '''
 
@@ -33,14 +44,17 @@ def getLineOne(hh, doc):
     if hh.contains('member'):
         if hh.get('member') == 'y':
             s += '*'
-    p.add_run(s.strip()).bold = True
+    run = p.add_run(removeStraySpaces(s))
+    run.bold = True
+    f = run.font
+    f.size = Pt(11)
     
     if hh.contains('occup1'):
         s = ' ' + hh.get('occup1').title()
     for x in range(2,5):
         if hh.contains('occup' + str(x)):
             s += ' / ' + hh.get('occup' + str(x)).title()
-    p.add_run(s)
+    p.add_run(removeStraySpaces(s))
     
     return doc
 
@@ -48,7 +62,7 @@ def getLineOne(hh, doc):
 def getLineTwo(hh):
     s = hh.get('address').title() + ', ' + hh.get('town').title() + ', ' + hh.get('state').upper() + ' ' + hh.get('zip') + ' ' + hh.get('telephone')
     # email?
-    return s
+    return removeStraySpaces(s)
     
 ### Line 3 - ordinations
 def getLineThree(hh):
@@ -59,10 +73,14 @@ def getLineThree(hh):
         s += 'Mins. ' + formatDate('ordain_mins', hh) + '; '
     if hh.contains('ordain_bish'):
         s += 'Bish. ' + formatDate('ordain_bish', hh)
-    return s
+    return removeStraySpaces(s)
 
 ### Line 4 - personal info
-def getLineFour(hh):
+def getLineFour(hh, doc):
+    p = doc.add_paragraph('')
+    
+    t = ''
+    b = ''
     s = 'b. ' + formatDate('born', hh) + ', '
     if hh.contains('hhhdiedm'):
         s += 'd. ' + formatDate('hhhdied', hh) + ', ' 
@@ -78,29 +96,33 @@ def getLineFour(hh):
     if hh.contains('cmary'):
         s += 'm. ' + formatDate('cmar', hh)
     if hh.contains('cwfname'):
-        s += ' to ' + hh.get('cwfname').upper() + ' ' + hh.get('cwmiddle').upper() + ' ' + hh.get('cwlname').upper()
+        s += ' to ' 
+        b = hh.get('cwfname').upper() + ' ' + hh.get('cwmiddle').upper() + ' ' + hh.get('cwlname').upper()
         if hh.get('cwmember') == 'y':
-            s += '*'
-        s += ', b. ' + formatDate('cwborn', hh)
+            b += '*'
+        t += ', b. ' + formatDate('cwborn', hh)
         if hh.contains('cwdiedy'):
-            s += ', d. ' + formatDate('cwdied', hh)
+            t += ', d. ' + formatDate('cwdied', hh)
         if hh.contains('cwdadfname'):
-            s += ', d.o. ' + hh.get('cwdadfname').title() + ' ' + hh.get('cwdadmname').title() + ' ' + hh.get('cwdadlname').title() + ' ' + hh.get('cwdadsname').title()
+            t += ', d.o. ' + hh.get('cwdadfname').title() + ' ' + hh.get('cwdadmname').title() + ' ' + hh.get('cwdadlname').title() + ' ' + hh.get('cwdadsname').title()
             if hh.contains('cwmomfname'):
-                s += ' & ' + hh.get('cwmomfname').title() + ' ' + hh.get('cwmommname').title() + ' (' + hh.get('cwmomlname').title() + ') ' + hh.get('cwdadlname').title()
+                t += ' & ' + hh.get('cwmomfname').title() + ' ' + hh.get('cwmommname').title() + ' (' + hh.get('cwmomlname').title() + ') ' + hh.get('cwdadlname').title()
             if hh.contains('cwparentcode'):
-                s += ' [' + hh.get('cwparentcode') + ']'
+                t += ' [' + hh.get('cwparentcode') + ']'
     if hh.contains('cwmovedfrom'):
-        s += ', moved in ' + formatDate('cwmovedfrom', hh) + ' from ' + hh.get('cwmovedfrom').title() + '.'
+        t += ', moved in ' + formatDate('cwmovedfrom', hh) + ' from ' + hh.get('cwmovedfrom').title() + '.'
     if hh.contains('movedfrom'):
-        s += ' Moved in ' + formatDate('movedfrom', hh) + ' from ' + hh.get('movedfrom').title() + '.'
-    return s
+        t += ' Moved in ' + formatDate('movedfrom', hh) + ' from ' + hh.get('movedfrom').title() + '.'
+    p.add_run(removeStraySpaces(s))
+    p.add_run(removeStraySpaces(b)).bold = True
+    p.add_run(removeStraySpaces(t))
+    return doc
     
 ### Children
-def getChildren(doc, hh):
-    if not hh.contains('cwc01fname'):
+### params: household, document, prefix
+def getChildren(hh, doc, p):
+    if not hh.contains(p + '01fname'):
         return doc
-    ## First middle last suff | bday | code (or d.) | wifef,m,l:addr code
     table = doc.add_table(rows=1, cols=4)
     table = set_col_widths(table)
     table.style = 'Table Grid'
@@ -108,33 +130,33 @@ def getChildren(doc, hh):
     cells = table.rows[0].cells
 
     n = 1
-    while hh.contains('cwc' + str(n).zfill(2) + 'fname'):
-        name = hh.get('cwc' + str(n).zfill(2) + 'fname').title() + ' '
-        name += hh.get('cwc' + str(n).zfill(2) + 'mname').title() + ' ' 
-        name += hh.get('cwc' + str(n).zfill(2) + 'sname').title()
+    while hh.contains(p + str(n).zfill(2) + 'fname'):
+        name = hh.get(p + str(n).zfill(2) + 'fname').title() + ' '
+        name += hh.get(p + str(n).zfill(2) + 'mname').title() + ' ' 
+        name += hh.get(p + str(n).zfill(2) + 'sname').title()
         cells[0].text = name
-        cells[1].text = formatDate('cwc' + str(n).zfill(2) + 'born', hh, True)
-        if hh.contains('cwc' + str(n).zfill(2) + 'diedy'):
+        cells[1].text = formatDate(p + str(n).zfill(2) + 'born', hh, True)
+        if hh.contains(p + str(n).zfill(2) + 'diedy'):
             cells[2].text = 'd.'
-            cells[3].text = formatDate('cwc' + str(n).zfill(2) + 'died', hh, True)
+            cells[3].text = formatDate(p + str(n).zfill(2) + 'died', hh, True)
         else:
-            cells[2].text = hh.get('cwc' + str(n).zfill(2) + 'bc').upper()
-            s = hh.get('cwc' + str(n).zfill(2) + 'spousefname').title() + ' ' 
-            s += hh.get('cwc' + str(n).zfill(2) + 'spousemname').title() + ' ' 
-            s += hh.get('cwc' + str(n).zfill(2) + 'spouselname').title() + ' ' 
-            s += hh.get('cwc' + str(n).zfill(2) + 'spousesname').title()
-            if len(s.strip()) > 0 and hh.contains('cwc' + str(n).zfill(2) + 'address'):
+            cells[2].text = hh.get(p + str(n).zfill(2) + 'bc').upper()
+            s = hh.get(p + str(n).zfill(2) + 'spousefname').title() + ' ' 
+            s += hh.get(p + str(n).zfill(2) + 'spousemname').title() + ' ' 
+            s += hh.get(p + str(n).zfill(2) + 'spouselname').title() + ' ' 
+            s += hh.get(p + str(n).zfill(2) + 'spousesname').title()
+            if len(s.strip()) > 0 and hh.contains(p + str(n).zfill(2) + 'address'):
                 s += ':'
-            s += hh.get('cwc' + str(n).zfill(2) + 'address').title() + ' '
-            if hh.contains('cwc' + str(n).zfill(2) + 'hshld#'):
-                s += ' [' + hh.get('cwc' + str(n).zfill(2) + 'hshld#') + ']'
+            s += hh.get(p + str(n).zfill(2) + 'address').title() + ' '
+            if hh.contains(p + str(n).zfill(2) + 'hshld#'):
+                s += ' [' + hh.get(p + str(n).zfill(2) + 'hshld#') + ']'
             cells[3].text = s.strip()
         n += 1
-        if hh.contains('cwc' + str(n).zfill(2) + 'fname'):
+        if hh.contains(p + str(n).zfill(2) + 'fname'):
             cells = table.add_row().cells
             
     table = set_font_size(table, 8)
-    
+    doc.add_paragraph('')
     return doc
         
 # Set column widths
@@ -162,6 +184,41 @@ def set_font_size(table, size):
                     font = run.font
                     font.size= Pt(size)  
     
-### Children of other wives
-
-//todo
+### Children of other spouses
+def getPrevSpouse(hh, doc, p, head=True):
+    if not hh.contains(p + 'fname'):
+        return doc
+    
+    par = doc.add_paragraph('')
+    s = ''
+    b = ''
+    t = ''
+    if head:
+        s += hh.get('firstname').title()
+    else:
+        s += hh.get('cwfname').title()
+    s += ' m. ' + formatDate(p + 'mar', hh) + ' '
+    b += hh.get(p + 'fname').upper() + ' ' + hh.get(p + 'mname').upper() + ' ' + hh.get(p + 'lname').upper()
+    t += ' b. ' + formatDate(p + 'born', hh)
+    if hh.contains(p + 'diedm'):
+        t += ' d. ' + formatDate(p + 'died', hh)
+    if hh.contains(p + 'dadfname'):
+        t += ' d.o. ' + hh.get(p + 'dadfname').title()
+        if hh.contains(p + 'momfname'):
+            t += ' & ' + hh.get(p + 'momfname').title() + ' (' + hh.get(p + 'momlname').title() + ')'
+        t += ' ' + hh.get(p + 'dadlname').title()
+        if hh.contains(p + 'parentcode'):
+            t += ' [' + hh.get(p + 'parentcode') + ']'
+        if hh.contains(p + 'movedfrom'):
+            t += ', moved in ' + formatDate(p + 'movedfrom', hh) + ' from ' + hh.get(p + 'movedfrom').title() + '.'
+    par.add_run(removeStraySpaces(s))
+    par.add_run(removeStraySpaces(b)).bold = True
+    par.add_run(removeStraySpaces(t))
+    doc = getChildren(hh, doc, p)
+    return doc
+    
+def removeStraySpaces(s):
+    while '  ' in s:
+        s = s.replace('  ', ' ')
+    return s
+    
