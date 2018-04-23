@@ -8,37 +8,47 @@ https://stackoverflow.com/questions/28884114/python-docx-align-both-left-and-rig
 
 - table style: https://github.com/python-openxml/python-docx/issues/9
 
-
-
--Right-justify the occupation
 -Create a GUI which allows a user to select which fields to include and specify the font size
 -Adjust the table style to match sample doc (indentation, cell padding, border color)
 -Fix capitalization of state abbreviations and certain name suffixes
--Increase page column width to match sample doc
+-Increase page column width to match sample doc (meh)
     
 (send groff code)
-
-
 '''
 
 from extractExcel import getData
 from docx.shared import Inches, Pt
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
 
 
 def formatDate(prefix, hh, z=False):
+    d = ''
     if z:
-        return hh.get(prefix + 'm').zfill(2) + '/' + hh.get(prefix + 'd').zfill(2) + '/' + hh.get(prefix + 'y').zfill(2)
+        if hh.contains(prefix + 'm'):
+            d += hh.get(prefix + 'm').zfill(2) + '/'
+        if hh.contains(prefix + 'd'):
+            d += hh.get(prefix + 'd').zfill(2) + '/'
+        if hh.contains(prefix + 'y'):
+            d += hh.get(prefix + 'y').zfill(2)
     else:
-        return hh.get(prefix + 'm') + '/' + hh.get(prefix + 'd') + '/' + hh.get(prefix + 'y')
+        if hh.contains(prefix + 'm'):
+            d += hh.get(prefix + 'm') + '/'
+        if hh.contains(prefix + 'd'):
+            d += hh.get(prefix + 'd') + '/'
+        if hh.contains(prefix + 'y'):
+            d += hh.get(prefix + 'y')
+    return d
         
 
 ### Line 1 - name and occupation
 def getLineOne(hh, doc):
     p = doc.add_paragraph('')
-
-    s = hh.get('hhcode') + ' ' + hh.get('lastname').upper() + ', ' + hh.get('firstname').upper() + ' ' + hh.get('middle').upper()
+    s = ''
+    if hh.contains('hhcode'):
+        s += hh.get('hhcode') + ' '
+    s += hh.get('lastname').upper() + ', ' + hh.get('firstname').upper() + ' ' + hh.get('middle').upper()
     if hh.contains('suffix'):
         s += ', ' + hh.get('suffix').upper()
     if hh.contains('member'):
@@ -50,18 +60,28 @@ def getLineOne(hh, doc):
     f.size = Pt(11)
     
     if hh.contains('occup1'):
-        s = ' ' + hh.get('occup1').title()
-    for x in range(2,5):
-        if hh.contains('occup' + str(x)):
-            s += ' / ' + hh.get('occup' + str(x)).title()
-    p.add_run(removeStraySpaces(s))
+        s = '\t' + hh.get('occup1').title()
+        for x in range(2,5):
+            if hh.contains('occup' + str(x)):
+                s += ' / ' + hh.get('occup' + str(x)).title()
+        p.add_run(removeStraySpaces(s))
     
+    tab_stops = p.paragraph_format.tab_stops
+    tab_stop = tab_stops.add_tab_stop(Inches(3.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES) #...LEADER.TABS also an option
     return doc
 
 ### Line 2 - address and contact info
 def getLineTwo(hh):
-    s = hh.get('address').title() + ', ' + hh.get('town').title() + ', ' + hh.get('state').upper() + ' ' + hh.get('zip') + ' ' + hh.get('telephone')
-    # email?
+    s = ''
+    if hh.contains('address'):
+        s += hh.get('address').title() + ', '
+    if hh.contains('town'):
+        s += hh.get('town').title() + ', ' 
+    s += hh.get('state').upper() + ' ' + hh.get('zip') + ' '
+    if hh.contains('telephone'):
+        s += formatPhone(hh.get('telephone'))
+    if hh.contains('email'):
+        s += '; ' + hh.get('email')
     return removeStraySpaces(s)
     
 ### Line 3 - ordinations
@@ -100,11 +120,12 @@ def getLineFour(hh, doc):
         b = hh.get('cwfname').upper() + ' ' + hh.get('cwmiddle').upper() + ' ' + hh.get('cwlname').upper()
         if hh.get('cwmember') == 'y':
             b += '*'
-        t += ', b. ' + formatDate('cwborn', hh)
+        if hh.contains('cwborny'):
+            t += ', b. ' + formatDate('cwborn', hh)
         if hh.contains('cwdiedy'):
             t += ', d. ' + formatDate('cwdied', hh)
         if hh.contains('cwdadfname'):
-            t += ', d.o. ' + hh.get('cwdadfname').title() + ' ' + hh.get('cwdadmname').title() + ' ' + hh.get('cwdadlname').title() + ' ' + hh.get('cwdadsname').title()
+            t += ', d.o. ' + hh.get('cwdadfname').title() + ' ' + hh.get('cwdadmname').title() + ' ' + hh.get('cwdadlname').title() + ' ' + formatSuffix(hh.get('cwdadsname'))
             if hh.contains('cwmomfname'):
                 t += ' & ' + hh.get('cwmomfname').title() + ' ' + hh.get('cwmommname').title() + ' (' + hh.get('cwmomlname').title() + ') ' + hh.get('cwdadlname').title()
             if hh.contains('cwparentcode'):
@@ -122,6 +143,8 @@ def getLineFour(hh, doc):
 ### params: household, document, prefix
 def getChildren(hh, doc, p):
     if not hh.contains(p + '01fname'):
+        if p == 'cwc':
+            doc.add_paragraph('')
         return doc
     table = doc.add_table(rows=1, cols=4)
     table = set_col_widths(table)
@@ -133,24 +156,23 @@ def getChildren(hh, doc, p):
     while hh.contains(p + str(n).zfill(2) + 'fname'):
         name = hh.get(p + str(n).zfill(2) + 'fname').title() + ' '
         name += hh.get(p + str(n).zfill(2) + 'mname').title() + ' ' 
-        name += hh.get(p + str(n).zfill(2) + 'sname').title()
-        cells[0].text = name
+        name += formatSuffix(hh.get(p + str(n).zfill(2) + 'sname'))
+        cells[0].text = removeStraySpaces(name).strip()
         cells[1].text = formatDate(p + str(n).zfill(2) + 'born', hh, True)
+        cells[2].text = hh.get(p + str(n).zfill(2) + 'bc').upper()
+        s = ''
         if hh.contains(p + str(n).zfill(2) + 'diedy'):
-            cells[2].text = 'd.'
-            cells[3].text = formatDate(p + str(n).zfill(2) + 'died', hh, True)
-        else:
-            cells[2].text = hh.get(p + str(n).zfill(2) + 'bc').upper()
-            s = hh.get(p + str(n).zfill(2) + 'spousefname').title() + ' ' 
-            s += hh.get(p + str(n).zfill(2) + 'spousemname').title() + ' ' 
-            s += hh.get(p + str(n).zfill(2) + 'spouselname').title() + ' ' 
-            s += hh.get(p + str(n).zfill(2) + 'spousesname').title()
-            if len(s.strip()) > 0 and hh.contains(p + str(n).zfill(2) + 'address'):
-                s += ':'
-            s += hh.get(p + str(n).zfill(2) + 'address').title() + ' '
-            if hh.contains(p + str(n).zfill(2) + 'hshld#'):
-                s += ' [' + hh.get(p + str(n).zfill(2) + 'hshld#') + ']'
-            cells[3].text = s.strip()
+            s += 'd. ' + formatDate(p + str(n).zfill(2) + 'died', hh, True) + ' '
+        s += hh.get(p + str(n).zfill(2) + 'spousefname').title() + ' ' 
+        s += hh.get(p + str(n).zfill(2) + 'spousemname').title() + ' ' 
+        s += hh.get(p + str(n).zfill(2) + 'spouselname').title() + ' ' 
+        s += formatSuffix(hh.get(p + str(n).zfill(2) + 'spousesname')) + ' '
+        if len(s.strip()) > 0 and hh.contains(p + str(n).zfill(2) + 'address'):
+            s += ': '
+        s += hh.get(p + str(n).zfill(2) + 'address').title() + ' '
+        if hh.contains(p + str(n).zfill(2) + 'hshld#'):
+            s += ' [' + hh.get(p + str(n).zfill(2) + 'hshld#') + ']'
+        cells[3].text = removeStraySpaces(s).strip()
         n += 1
         if hh.contains(p + str(n).zfill(2) + 'fname'):
             cells = table.add_row().cells
@@ -216,6 +238,23 @@ def getPrevSpouse(hh, doc, p, head=True):
     par.add_run(removeStraySpaces(t))
     doc = getChildren(hh, doc, p)
     return doc
+    
+def formatPhone(p):
+    s = '('
+    for c in p:
+        if len(s) == 4:
+            s += ') '
+        if len(s) == 9:
+            s += '-'
+        if c.isdigit():
+            s += c
+    return s
+    
+def formatSuffix(s):
+    if s.lower() == 'jr' or s.lower() == 'sr':
+        return s.title()
+    else:
+        return s.upper()
     
 def removeStraySpaces(s):
     while '  ' in s:

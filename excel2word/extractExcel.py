@@ -1,7 +1,7 @@
 from openpyxl import Workbook, load_workbook
 from docx import Document
 
-ATTRS_ROW = '3'
+ATTRS_ROW = '1'
 
 # Essentially a dict that returns empty string if attr doesn't exist
 class Household:
@@ -33,20 +33,17 @@ def getHouseholds(ws):
     numAttrs = getNumAttrs(ws)
     numHouseholds = getNumHouseholds(ws)
     households = []
-    for x in range(4, 5):#numHouseholds):
+    print 'started to get households'
+    for x in range(int(ATTRS_ROW)+1, 30):#numHouseholds):
         hh = {}
         for y in range(1, numAttrs):
             attr = ws[colNumToString(y) + ATTRS_ROW].value
             val = ws[colNumToString(y) + str(x)].value
             if not val is None:
                 attr = attr.strip().encode('ascii', 'ignore')
-                
                 val = str(val).strip().encode('ascii', 'ignore')
-                #if isinstance(val, basestring):
-                #    val = val.strip().encode('ascii', 'ignore')
-                #else:
-                #    print val
-                hh[attr] = val
+                if len(val) > 0:
+                    hh[attr] = val
         households.append(Household(hh))
     return households
 
@@ -79,7 +76,8 @@ def colNumToString(div):
    
 # Run everything to get households
 def getData():
-    ws = loadWorkbook('samplehousehold.xlsx')
+    ws = loadWorkbook('Master_Amish_Database_I.xlsx')
+    print 'loaded workbook'
     households = getHouseholds(ws)
     return households
         

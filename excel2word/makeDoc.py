@@ -3,14 +3,26 @@ from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, get
 from docx import Document
 from docx.shared import Inches, Cm, Pt
 from docx.enum.section import WD_SECTION
+import time
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 
 def exampleDoc():
-    document = Document()
-
+    document = Document('custom_styles.docx')
+    paragraph = document.add_paragraph("hello world\tFarmer")
+    tab_stops = paragraph.paragraph_format.tab_stops
+    tab_stop = tab_stops.add_tab_stop(Inches(2), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+    document.save('demo.docx')
+    
+    
+    #table = document.add_table(1, 2, style='NameTable')
+    #table.cell(0,0).text = 'Left Text'
+    #table.cell(0,1).text = 'Right Text'
+    #document.save('demo.docx')
+    '''
     document.add_heading('Document Title', 0)
     
     p = document.add_paragraph('A plain paragraph having some ')
@@ -44,6 +56,7 @@ def exampleDoc():
     document.add_page_break()
 
     document.save('demo.docx')
+    '''
     
 def testDoc(hhs):
     doc = Document()
@@ -80,7 +93,14 @@ def testDoc(hhs):
         sec.bottom_margin = Cm(.5)
         sec.left_margin = Cm(.5)
         sec.right_margin = Cm(.5)
-    doc.save('test.docx')
+    try:
+        doc.save('test.docx')
+    except:
+        print 'permission denied. trying again in 10'
+        time.sleep(10)
+        doc.save('test.docx')
+        
+    
    
 
 def set_number_of_columns(section, cols):
