@@ -76,6 +76,7 @@ def colNumToString(div):
    
 # Run everything to get households
 def getData():
+    print 'loading workbook...'
     ws = loadWorkbook('Master_Amish_Database_I.xlsx')
     print 'loaded workbook'
     households = getHouseholds(ws)

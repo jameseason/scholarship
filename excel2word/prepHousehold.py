@@ -10,10 +10,20 @@ https://stackoverflow.com/questions/28884114/python-docx-align-both-left-and-rig
 
 -Create a GUI which allows a user to select which fields to include and specify the font size
 -Adjust the table style to match sample doc (indentation, cell padding, border color)
--Fix capitalization of state abbreviations and certain name suffixes
 -Increase page column width to match sample doc (meh)
     
-(send groff code)
+
+-create a district-based title page
+The title page should include a list of numbered household heads. 
+If household numbers are available, use those, and if not, just a 1., 2., 3. is fine. 
+The district name should be at the top in larger letters and centered. 
+If someone is a deacon, minister, or bishop, those words should follow the household name and in parentheses, and only the last ordination (so bishop trumps minister trumps deacon) 
+Also, a header should be at the top and centered with the name of the settlement and the name of the district. 
+An option should be made available in the program to exclude the settlement name (in case the whole directory is the same settlement).
+
+-table of contents and index. 
+ -we need the church settlement and district title pages to be the main points.
+ -then two separate indexes: one for the household head, one for the wife.    
 '''
 
 from extractExcel import getData
@@ -105,13 +115,13 @@ def getLineFour(hh, doc):
     if hh.contains('hhhdiedm'):
         s += 'd. ' + formatDate('hhhdied', hh) + ', ' 
     if hh.contains('fatherfirst'):
-        s += 's.o. ' + hh.get('fatherfirst').title() + ' ' + hh.get('fathermiddle').title() + ' ' + hh.get('fathersuffix').title()
+        s += 's.o. ' + hh.get('fatherfirst').title() + ' ' + hh.get('fathermiddle').title() + ' ' + formatSuffix(hh.get('fathersuffix'))
         if hh.contains('motherfirst'):
             s += ' & ' + hh.get('motherfirst').title() + ' ' + hh.get('mothermiddle').title() + ' (' + hh.get('motherlast').title() + ') ' + hh.get('fatherlast').title()
         if hh.contains('hhhparentcode'):
             s += ' [' + hh.get('hhhparentcode') + ']'
     if hh.contains('hhhmovedfrom'):
-        s += ', moved in ' + formatDate('hhhmovedfrom', hh) + ' from ' + hh.get('hhhmovedfrom').title()
+        s += ', moved in ' + formatDate('hhhmovedfrom', hh) + ' from ' + formatAddress(hh.get('hhhmovedfrom'))
     s += '; '
     if hh.contains('cmary'):
         s += 'm. ' + formatDate('cmar', hh)
@@ -131,9 +141,9 @@ def getLineFour(hh, doc):
             if hh.contains('cwparentcode'):
                 t += ' [' + hh.get('cwparentcode') + ']'
     if hh.contains('cwmovedfrom'):
-        t += ', moved in ' + formatDate('cwmovedfrom', hh) + ' from ' + hh.get('cwmovedfrom').title() + '.'
+        t += ', moved in ' + formatDate('cwmovedfrom', hh) + ' from ' + formatAddress(hh.get('cwmovedfrom')) + '.'
     if hh.contains('movedfrom'):
-        t += ' Moved in ' + formatDate('movedfrom', hh) + ' from ' + hh.get('movedfrom').title() + '.'
+        t += ' Moved in ' + formatDate('movedfrom', hh) + ' from ' + formatAddress(hh.get('movedfrom')) + '.'
     p.add_run(removeStraySpaces(s))
     p.add_run(removeStraySpaces(b)).bold = True
     p.add_run(removeStraySpaces(t))
@@ -169,7 +179,7 @@ def getChildren(hh, doc, p):
         s += formatSuffix(hh.get(p + str(n).zfill(2) + 'spousesname')) + ' '
         if len(s.strip()) > 0 and hh.contains(p + str(n).zfill(2) + 'address'):
             s += ': '
-        s += hh.get(p + str(n).zfill(2) + 'address').title() + ' '
+        s += formatAddress(hh.get(p + str(n).zfill(2) + 'address')) + ' '
         if hh.contains(p + str(n).zfill(2) + 'hshld#'):
             s += ' [' + hh.get(p + str(n).zfill(2) + 'hshld#') + ']'
         cells[3].text = removeStraySpaces(s).strip()
@@ -232,7 +242,7 @@ def getPrevSpouse(hh, doc, p, head=True):
         if hh.contains(p + 'parentcode'):
             t += ' [' + hh.get(p + 'parentcode') + ']'
         if hh.contains(p + 'movedfrom'):
-            t += ', moved in ' + formatDate(p + 'movedfrom', hh) + ' from ' + hh.get(p + 'movedfrom').title() + '.'
+            t += ', moved in ' + formatDate(p + 'movedfrom', hh) + ' from ' + formatAddress(hh.get(p + 'movedfrom')) + '.'
     par.add_run(removeStraySpaces(s))
     par.add_run(removeStraySpaces(b)).bold = True
     par.add_run(removeStraySpaces(t))
@@ -249,6 +259,17 @@ def formatPhone(p):
         if c.isdigit():
             s += c
     return s
+    
+def formatAddress(s):
+    t = ''
+    s = s.split()
+    for c in s:
+       if len(c) == 2 and c.isalpha():
+          t += c.upper()
+       else:
+          t += c.title()
+       t += ' '
+    return t.strip()
     
 def formatSuffix(s):
     if s.lower() == 'jr' or s.lower() == 'sr':
