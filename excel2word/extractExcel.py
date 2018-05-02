@@ -1,7 +1,6 @@
 from openpyxl import Workbook, load_workbook
 from docx import Document
 
-ATTRS_ROW = '1'
 
 # Essentially a dict that returns empty string if attr doesn't exist
 class Household:
@@ -29,12 +28,16 @@ def loadWorkbook(path):
     return ws
     
 # Get an array of dicts of attrs for each households
-def getHouseholds(ws):
-    numAttrs = getNumAttrs(ws)
-    numHouseholds = getNumHouseholds(ws)
+def getHouseholds(ws, ATTRS_ROW, START_ROW, END_ROW):
+    numAttrs = getNumAttrs(ws, ATTRS_ROW)
+    numHouseholds = getNumHouseholds(ws, numAttrs, ATTRS_ROW, START_ROW)
     households = []
-    print 'started to get households'
-    for x in range(int(ATTRS_ROW)+1, 30):#numHouseholds):
+    if len(END_ROW.strip()) > 0:
+        end = int(END_ROW)
+    else:
+        end = numHouseholds
+    print "getting households from excel down to row " + str(end) + "..."
+    for x in range(int(START_ROW), end):
         hh = {}
         for y in range(1, numAttrs):
             attr = ws[colNumToString(y) + ATTRS_ROW].value
@@ -45,10 +48,11 @@ def getHouseholds(ws):
                 if len(val) > 0:
                     hh[attr] = val
         households.append(Household(hh))
+    print "got households"
     return households
 
 # Number of attributes in ws    
-def getNumAttrs(ws):
+def getNumAttrs(ws, ATTRS_ROW):
     i = 1
     attr = ws[colNumToString(i) + ATTRS_ROW].value
     while not attr is None:
@@ -57,12 +61,17 @@ def getNumAttrs(ws):
     return i
 
 # Number of households in ws    
-def getNumHouseholds(ws):    
-    i = int(ATTRS_ROW) + 1
-    householdHead = ws['I' + str(i)].value
+def getNumHouseholds(ws, numAttrs, ATTRS_ROW, START_ROW): 
+    i = int(START_ROW)
+    firstnameRow = ''
+    for x in range(1, numAttrs):
+        if ws[colNumToString(x) + ATTRS_ROW].value == "firstname":
+            firstnameRow = x
+            break
+    householdHead = ws[colNumToString(firstnameRow) + str(i)].value
     while not householdHead is None:
         i += 1
-        householdHead = ws['I' + str(i)].value
+        householdHead = ws[colNumToString(firstnameRow) + str(i)].value
     return i
     
 # Convert column number to corresponding letter, ex: 1 -> A, 2 -> B
@@ -75,11 +84,14 @@ def colNumToString(div):
     return string    
    
 # Run everything to get households
-def getData():
+def getData(excelFile, attrRow, startRow, endRow):
+    ATTRS_ROW = str(attrRow)
+    START_ROW = str(startRow)
+    END_ROW = str(endRow)
     print 'loading workbook...'
-    ws = loadWorkbook('Master_Amish_Database_I.xlsx')
+    ws = loadWorkbook(excelFile)
     print 'loaded workbook'
-    households = getHouseholds(ws)
+    households = getHouseholds(ws, ATTRS_ROW, START_ROW, END_ROW)
     return households
         
         

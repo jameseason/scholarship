@@ -1,69 +1,31 @@
 from extractExcel import getData
-from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren, getPrevSpouse
+from prepHousehold import getLineOne, getLineTwo, getLineThree, getLineFour, getChildren, getPrevSpouse, getHeadName
 from docx import Document
 from docx.shared import Inches, Cm, Pt
 from docx.enum.section import WD_SECTION
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER, WD_ALIGN_PARAGRAPH
 import time
-from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
-
 from docx.oxml import OxmlElement
+from Tkinter import *
 from docx.oxml.ns import qn
 
+w = Tk()
+inputLocation = StringVar()
+outputLocation = StringVar()
+attrRow = StringVar()
+startRow = StringVar()
+endRow = StringVar()
+titleCheck = IntVar()
 
-def exampleDoc():
-    document = Document('custom_styles.docx')
-    paragraph = document.add_paragraph("hello world\tFarmer")
-    tab_stops = paragraph.paragraph_format.tab_stops
-    tab_stop = tab_stops.add_tab_stop(Inches(2), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
-    document.save('demo.docx')
     
-    
-    #table = document.add_table(1, 2, style='NameTable')
-    #table.cell(0,0).text = 'Left Text'
-    #table.cell(0,1).text = 'Right Text'
-    #document.save('demo.docx')
-    '''
-    document.add_heading('Document Title', 0)
-    
-    p = document.add_paragraph('A plain paragraph having some ')
-    p.add_run('bold').bold = True
-    p.add_run(' and some ')
-    p.add_run('italic.').italic = True
-
-    document.add_heading('Heading, level 1', level=1)
-    document.add_paragraph('Intense quote', style='Intense Quote')
-
-    document.add_paragraph(
-        'first item in unordered list', style='List Bullet'
-    )
-    document.add_paragraph(
-        'first item in ordered list', style='List Number'
-    )
-
-    table = document.add_table(rows=1, cols=3)
-   
-    tc = table.cell(0,0)._tc     # As a test, fit text to cell 0,0
-    tcPr = tc.get_or_add_tcPr()
-
-    tcFitText = OxmlElement('w:tcLeftPadding')
-    tcFitText.set(qn('w:val'),"0")
-    tcPr.append(tcFitText)
-    
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Qty'
-    hdr_cells[1].text = 'Id'
-    hdr_cells[2].text = 'Desc'
-    document.add_page_break()
-
-    document.save('demo.docx')
-    '''
-    
-def testDoc(hhs):
+def makeDoc(hhs):
+    print "generating document..."
     doc = Document()
     #doc.add_paragraph("first page blank")
     #doc.add_page_break()
-    section = doc.add_section(WD_SECTION.NEW_PAGE)
-    set_number_of_columns(section, 2)
+    if titleCheck.get() != 1:
+        section = doc.add_section(WD_SECTION.NEW_PAGE)
+        set_number_of_columns(section, 2)
     style = doc.styles['Normal']
     
     font = style.font
@@ -74,7 +36,53 @@ def testDoc(hhs):
     paragraph_format.space_before = 0
     paragraph_format.space_after = 0
     
+    current_settlement = None
+    current_district = None 
+    list = None
+    
+    count = 1
+    
+    
     for hh in hhs:
+        if titleCheck.get() == 1:
+            if hh.get('settlement') == current_settlement and hh.get('chdist') == current_district:
+                if hh.contains('hhcode'):
+                   list.add_run(hh.get('hhcode') + ' ' + getHeadName(hh) + '\n')
+                else:
+                   list.add_run(str(count) + '. ' + getHeadName(hh) + '\n')
+                count += 1
+            else:
+                current_settlement = hh.get('settlement')
+                current_district = hh.get('chdist')
+                if list != None: #if this isn't the first dist
+                   doc.add_page_break()
+                   sec1 = doc.add_section(WD_SECTION.NEW_PAGE)
+                   set_number_of_columns(sec1, 1)
+                   
+                
+                head = doc.add_paragraph(hh.get('settlement').title() + ': ' + hh.get('chdist').title())
+                head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                
+                set = doc.add_paragraph('')
+                set.alignment = WD_ALIGN_PARAGRAPH.CENTER 
+                run = set.add_run(hh.get('chdist').title())
+                run.font.size = Pt(20)
+                
+                count = 1
+                if hh.contains('hhcode'):
+                   first_hh = hh.get('hhcode') + ' ' + getHeadName(hh) + '\n'
+                else:
+                   first_hh = str(count) + '. ' + getHeadName(hh) + '\n'
+                   
+                list = doc.add_paragraph(first_hh)
+                count += 1
+                
+                doc.add_page_break()
+                sec2 = doc.add_section(WD_SECTION.NEW_PAGE)
+                set_number_of_columns(sec2, 2)            
+            
+            
+            
         doc = getLineOne(hh, doc)
         two = doc.add_paragraph(getLineTwo(hh).strip())
         three = getLineThree(hh).strip()
@@ -93,12 +101,14 @@ def testDoc(hhs):
         sec.bottom_margin = Cm(.5)
         sec.left_margin = Cm(.5)
         sec.right_margin = Cm(.5)
+    
     try:
-        doc.save('test.docx')
+        print "saving to " + outputLocation.get()
+        doc.save(outputLocation.get())
     except:
         print 'permission denied. trying again in 10'
         time.sleep(10)
-        doc.save('test.docx')
+        doc.save(outputLocation.get())
         
     
    
@@ -109,12 +119,12 @@ def set_number_of_columns(section, cols):
     section._sectPr.xpath("./w:cols")[0].set(WNS_COLS_NUM, str(cols))
     
 
-
-#exampleDoc()    
-#quit()
-
-print 'started'
-hhs = getData()
-print 'got data.'
-testDoc(hhs)
-print 'done'
+if __name__ == "__main__":
+    run()
+   
+def run():
+    print 'started'
+    hhs = getData(inputLocation.get(), attrRow.get(), startRow.get(), endRow.get())
+    print 'ready to make document'
+    makeDoc(hhs)
+    print 'done'

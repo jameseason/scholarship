@@ -1,31 +1,3 @@
-'''
-- occupation: right justified
-https://stackoverflow.com/questions/28884114/python-docx-align-both-left-and-right-on-same-line?noredirect=1&lq=1
-
-- GUI:
-    - select which elements to include
-    - adjust font size
-
-- table style: https://github.com/python-openxml/python-docx/issues/9
-
--Create a GUI which allows a user to select which fields to include and specify the font size
--Adjust the table style to match sample doc (indentation, cell padding, border color)
--Increase page column width to match sample doc (meh)
-    
-
--create a district-based title page
-The title page should include a list of numbered household heads. 
-If household numbers are available, use those, and if not, just a 1., 2., 3. is fine. 
-The district name should be at the top in larger letters and centered. 
-If someone is a deacon, minister, or bishop, those words should follow the household name and in parentheses, and only the last ordination (so bishop trumps minister trumps deacon) 
-Also, a header should be at the top and centered with the name of the settlement and the name of the district. 
-An option should be made available in the program to exclude the settlement name (in case the whole directory is the same settlement).
-
--table of contents and index. 
- -we need the church settlement and district title pages to be the main points.
- -then two separate indexes: one for the household head, one for the wife.    
-'''
-
 from extractExcel import getData
 from docx.shared import Inches, Pt
 from docx.oxml import OxmlElement
@@ -248,6 +220,24 @@ def getPrevSpouse(hh, doc, p, head=True):
     par.add_run(removeStraySpaces(t))
     doc = getChildren(hh, doc, p)
     return doc
+    
+def getHeadName(hh):
+    name = ''
+    name += hh.get('lastname').title() 
+    name += ', ' + hh.get('firstname').title() 
+    name += ' ' + hh.get('middle').title()
+    if hh.contains('suffix'):
+        name += ', ' + formatSuffix(hh.get('suffix'))
+    
+    
+    if hh.contains('ordain_bish'):
+        name += ' (bishop)'
+    elif hh.contains('ordain_mins'):
+        name += ' (minister)'
+    elif hh.contains('ordain_deac'):
+        name += ' (deacon)'
+  
+    return removeStraySpaces(name).strip()
     
 def formatPhone(p):
     s = '('
